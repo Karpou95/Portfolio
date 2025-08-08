@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>karamupoutama.com</title>
+  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,100&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-color: #f5f5f5;
+      --text-color: #222;
+      --overlay-color: rgba(0, 0, 0, 0.6);
+      --modal-bg: rgba(0, 0, 0, 0.9);
+      --icon-fill: #000;
+      --title-sub-color: #555;
+    }
+
+    body.night-mode {
+      --bg-color: #0e0e0e;
+      --text-color: #ffffff;
+      --overlay-color: rgba(255, 255, 255, 0.1);
+      --modal-bg: rgba(0, 0, 0, 0.95);
+      --icon-fill: #ffffff;
+      --title-sub-color: #ccc;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg-color);
+      font-family: 'Josefin Sans', sans-serif;
+      font-weight: 100;
+      color: var(--text-color);
+      transition: background 0.3s, color 0.3s;
+    }
+
+    header {
+      padding: 30px 20px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .left-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      flex-direction: column;
+    }
+
+    header h1 {
+      margin: 0 0 5px;
+      font-size: 2.8rem;
+    }
+
+    header p {
+      margin: 0;
+      font-size: 1.2rem;
+      color: var(--title-sub-color);
+    }
+
+    .linkedin-link {
+      width: 28px;
+      height: 28px;
+      display: block;
+    }
+
+    .linkedin-link svg {
+      width: 100%;
+      height: 100%;
+      fill: var(--icon-fill);
+      transition: fill 0.3s;
+    }
+
+    .linkedin-link:hover svg {
+      opacity: 0.7;
+    }
+
+    .right-header-group {
+      position: absolute;
+      top: 30px;
+      right: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .video-item {
+      position: relative;
+      width: 100%;
+      padding-top: calc((9 / 16 * 100%) * 0.7); /* Thinner thumbnails */
+      overflow: hidden;
+      cursor: pointer;
+      opacity: 0;
+      animation: fadeIn 1s forwards;
+    }
+    .video-item:nth-child(1) { animation-delay: 0s; }
+    .video-item:nth-child(2) { animation-delay: 0.4s; }
+    .video-item:nth-child(3) { animation-delay: 0.8s; }
+    .video-item:nth-child(4) { animation-delay: 1.2s; }
+
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+
+    .video-item img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+    .video-item:hover img {
+      transform: scale(1.05);
+    }
+
+    .video-item::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0);
+      transition: background 0.3s ease;
+      z-index: 1;
+    }
+
+    .video-item:hover::before {
+      background: rgba(0, 0, 0, 0.75);
+    }
+
+    .video-title {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1.4rem;
+      opacity: 0;
+      transition: opacity 1s ease;
+      pointer-events: none;
+      z-index: 2;
+      text-align: center;
+      padding: 0 10px;
+      box-sizing: border-box;
+    }
+
+    .video-item:hover .video-title {
+      opacity: 1;
+    }
+
+    .video-title span {
+      font-size: 0.72em;
+      margin-top: 5px;
+      opacity: 0.8;
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: var(--modal-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      position: relative;
+      width: 90%;
+      max-width: 960px;
+      aspect-ratio: 16 / 9;
+      background: black;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      font-size: 20px;
+      color: #222;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    .modal-close:hover {
+      background: white;
+    }
+
+    .night-toggle {
+      cursor: pointer;
+      font-size: 0.8rem;
+      padding: 3px 8px;
+      border: 1px solid var(--text-color);
+      border-radius: 5px;
+      background: transparent;
+      color: var(--text-color);
+      transition: background 0.3s, color 0.3s;
+      margin-left: 10px;
+    }
+
+    .night-toggle:hover {
+      background: var(--text-color);
+      color: var(--bg-color);
+    }
+
+    @media (max-width: 800px) {
+      .video-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .right-header-group {
+        position: static;
+        margin-top: 15px;
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 500px) {
+      .video-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="left-header">
+    <h1>KARAMU POUTAMA</h1>
+    <p>Videographer | Audio Engineer | Music Producer</p>
+  </div>
+
+  <div class="right-header-group">
+    <a href="https://www.linkedin.com/in/karamupoutama/" target="_blank" rel="noopener" aria-label="LinkedIn Profile" class="linkedin-link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1 4.98 2.12 4.98 3.5zM.25 8h4.5V24H.25V8zM7.5 8h4.3v2.2h.1c.6-1.1 2.1-2.2 4.3-2.2 4.6 0 5.45 3 5.45 6.9V24h-4.5v-7.7c0-1.8-.03-4.2-2.55-4.2-2.55 0-2.95 2-2.95 4v7.9h-4.5V8z"/>
+      </svg>
+    </a>
+    <button class="night-toggle" onclick="toggleNightMode()">Night Mode</button>
+  </div>
+</header>
+
+<div class="video-grid">
+  <div class="video-item" data-video-id="H15VIfPQ8Qc">
+    <img src="https://img.youtube.com/vi/H15VIfPQ8Qc/maxresdefault.jpg" alt="PROJECT HUON" />
+    <div class="video-title">PROJECT HUON<span>2025</span></div>
+  </div>
+  <div class="video-item" data-video-id="TJ4i75XpKys">
+    <img src="https://img.youtube.com/vi/TJ4i75XpKys/maxresdefault.jpg" alt="Steve & Kayla Djukic" />
+    <div class="video-title">Steve & Kayla Djukic<span>2025</span></div>
+  </div>
+  <div class="video-item" data-video-id="ZLLXWPY_Fys">
+    <img src="https://img.youtube.com/vi/ZLLXWPY_Fys/maxresdefault.jpg" alt="Pink Monkey" />
+    <div class="video-title">Pink Monkey<span>2024</span></div>
+  </div>
+  <div class="video-item" data-video-id="f2x4YeAHx0E">
+    <img src="https://img.youtube.com/vi/f2x4YeAHx0E/maxresdefault.jpg" alt="Deer Honey" />
+    <div class="video-title">Deer Honey<span>2024</span></div>
+  </div>
+</div>
+
+<div class="modal" id="videoModal">
+  <div class="modal-content">
+    <button class="modal-close" id="modalCloseBtn">&times;</button>
+    <iframe id="videoIframe" width="100%" height="100%" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>
+  </div>
+</div>
+
+<script>
+  const items = document.querySelectorAll('.video-item');
+  const modal = document.getElementById('videoModal');
+  const iframe = document.getElementById('videoIframe');
+  const closeBtn = document.getElementById('modalCloseBtn');
+
+  items.forEach(item => {
+    item.addEventListener('click', () => {
+      const vid = item.dataset.videoId;
+      iframe.src = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0`;
+      modal.classList.add('active');
+    });
+  });
+
+  closeBtn.addEventListener('click', () => {
+    iframe.src = '';
+    modal.classList.remove('active');
+  });
+
+  modal.addEventListener('click', e => {
+    if (e.target === modal) closeBtn.click();
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && modal.classList.contains('active')) closeBtn.click();
+  });
+
+  function toggleNightMode() {
+    document.body.classList.toggle('night-mode');
+  }
+</script>
+</body>
+</html>
+
