@@ -33,6 +33,11 @@
       transition: background 0.3s, color 0.3s;
     }
 
+    /* Header fade-in */
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+
     header {
       padding: 30px 20px;
       position: relative;
@@ -40,6 +45,8 @@
       flex-direction: column;
       align-items: center;
       text-align: center;
+      opacity: 0;
+      animation: fadeIn 1s forwards;
     }
 
     .left-header {
@@ -94,6 +101,18 @@
       box-sizing: border-box;
     }
 
+    /* New float-up animation */
+    @keyframes floatUp {
+      0% {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     .video-item {
       position: relative;
       width: 100%;
@@ -101,16 +120,14 @@
       overflow: hidden;
       cursor: pointer;
       opacity: 0;
-      animation: fadeIn 1s forwards;
+      animation-name: floatUp;
+      animation-duration: 1s;
+      animation-fill-mode: forwards;
     }
     .video-item:nth-child(1) { animation-delay: 0s; }
     .video-item:nth-child(2) { animation-delay: 0.4s; }
     .video-item:nth-child(3) { animation-delay: 0.8s; }
     .video-item:nth-child(4) { animation-delay: 1.2s; }
-
-    @keyframes fadeIn {
-      to { opacity: 1; }
-    }
 
     .video-item img {
       position: absolute;
@@ -164,6 +181,18 @@
 
     .video-item:hover .video-title {
       opacity: 1;
+    }
+
+    /* Mobile fade-in when centered */
+    @media (max-width: 500px) {
+      .video-title {
+        opacity: 0 !important;
+        transition: opacity 0.5s ease;
+      }
+      .video-item.centered .video-title {
+        opacity: 1 !important;
+        pointer-events: auto;
+      }
     }
 
     .video-title span {
@@ -331,7 +360,39 @@
   function toggleNightMode() {
     document.body.classList.toggle('night-mode');
   }
+
+  // Mobile fade-in video title when centered in viewport
+  if (window.matchMedia("(max-width: 500px)").matches) {
+    const observerOptions = {
+      root: null,
+      rootMargin: '0px',
+      threshold: 0.5
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        const videoItem = entry.target;
+
+        const bounding = videoItem.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const centerY = viewportHeight / 2;
+
+        const itemCenterY = bounding.top + bounding.height / 2;
+
+        const isCentered = Math.abs(centerY - itemCenterY) < viewportHeight * 0.1;
+
+        if (entry.isIntersecting && isCentered) {
+          videoItem.classList.add('centered');
+        } else {
+          videoItem.classList.remove('centered');
+        }
+      });
+    }, observerOptions);
+
+    document.querySelectorAll('.video-item').forEach(item => {
+      observer.observe(item);
+    });
+  }
 </script>
 </body>
 </html>
-
