@@ -68,7 +68,7 @@
   /* right header (LinkedIn + toggle) - fixed to right side of viewport */
   .right-header-group{
     position:fixed;
-    top:30px; /* set once on load/resize to match final header top */
+    top:30px; /* default/fallback; JS will adjust on load/resize */
     right:20px;
     display:flex;
     gap:10px;
@@ -156,7 +156,7 @@
   </header>
 </div>
 
-<!-- moved outside header-container so position:fixed is relative to viewport (entire screen) -->
+<!-- fixed controls remain outside the header so they are viewport-anchored -->
 <div class="right-header-group" id="rightHeaderGroup" aria-label="LinkedIn and Night Mode Toggle">
   <a href="https://www.linkedin.com/in/karamupoutama/" target="_blank" rel="noopener" aria-label="LinkedIn Profile" class="linkedin-link">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1 4.98 2.12 4.98 3.5zM.25 8h4.5V24H.25V8zM7.5 8h4.3v2.2h.1c.6-1.1 2.1-2.2 4.3-2.2 4.6 0 5.45 3 5.45 6.9V24h-4.5v-7.7c0-1.8-.03-4.2-2.55-4.2-2.55 0-2.95 2-2.95 4v7.9h-4.5V8z"/></svg>
@@ -237,9 +237,19 @@ function setGridSpacing(spacing = 12){
   videoGrid.style.marginTop = `${Math.max(margin, 12)}px`;
 }
 
-/* Set right control to fixed final top (no per-frame sync). Keeps them at the right side. */
-function setRightControlsTopToFinal(){
-  rightHeaderGroup.style.top = finalTopPx() + 'px';
+/* Set right controls position:
+   - On mobile (<=500px) place below the header (header bottom + offset)
+   - On desktop keep them at the fixed final top */
+function setRightControlsPosition(){
+  if (window.innerWidth <= 500) {
+    const rect = headerContainer.getBoundingClientRect();
+    // place below header bottom with small gap
+    const gap = 8;
+    const top = Math.round(rect.bottom + gap);
+    rightHeaderGroup.style.top = Math.max(6, top) + 'px';
+  } else {
+    rightHeaderGroup.style.top = finalTopPx() + 'px';
+  }
 }
 
 /* Start fade-in of header (center). Use px-based top from the beginning to avoid unit switch. */
@@ -254,6 +264,9 @@ function fadeInHeader(ts){
   headerContainer.style.top = startTopPx + 'px';
   // keep transform at translate(-50%,-50%) while centered
   headerContainer.style.transform = `translate(-50%,-50%)`;
+
+  // ensure right controls are placed appropriately while fading
+  setRightControlsPosition();
 
   if (p < 1){
     requestAnimationFrame(fadeInHeader);
@@ -279,6 +292,9 @@ function floatHeaderUp(ts){
   const currentTranslateY = -50 + 50 * eased;
   headerContainer.style.transform = `translate(-50%, ${currentTranslateY}%)`;
 
+  // Update right controls position during the animation (on mobile it follows header bottom)
+  setRightControlsPosition();
+
   // Start thumbnails & right-header when eased crosses thresholds (so they wait until header is very close to final)
   if (!thumbnailsStarted && eased >= thumbnailsStartAt){
     thumbnailsStarted = true;
@@ -302,19 +318,19 @@ function floatHeaderUp(ts){
     animationFinished = true;
     // final spacing
     setGridSpacing(12);
-    // ensure right controls are exactly at final top
-    setRightControlsTopToFinal();
+    // ensure right controls are positioned exactly for final layout
+    setRightControlsPosition();
     // make sure animations started if missed
     if (!rightHeaderStarted){ rightHeaderStarted = true; animateRightHeaderGroup(); }
     if (!thumbnailsStarted){ thumbnailsStarted = true; startThumbnails(); }
   }
 }
 
-/* Animate the right header group (LinkedIn + toggle) - just fades/moves in; stays fixed right side */
+/* Animate the right header group (LinkedIn + toggle) - fade/move in; stays viewport-anchored */
 function animateRightHeaderGroup(){
   rightHeaderGroup.classList.add('visible');
-  // ensure it's placed at the final top
-  setRightControlsTopToFinal();
+  // ensure it's placed correctly before animating
+  setRightControlsPosition();
   // simple fade/translate in
   rightHeaderGroup.style.opacity = '0';
   rightHeaderGroup.style.transform = 'translateY(10px)';
@@ -374,10 +390,10 @@ window.addEventListener('resize', () => {
     headerContainer.style.top = finalTopPx() + 'px';
     headerContainer.style.transform = 'translate(-50%, 0)';
     setGridSpacing(12);
-    setRightControlsTopToFinal();
+    setRightControlsPosition();
   } else {
-    // still animating or before animation — set right controls to final top (they remain fixed)
-    setRightControlsTopToFinal();
+    // still animating or before animation — update controls position (mobile follows header)
+    setRightControlsPosition();
   }
 });
 
@@ -396,8 +412,8 @@ window.addEventListener('load', () => {
   headerContainer.style.top = startTopPx + 'px';
   headerContainer.style.transform = 'translate(-50%,-50%)';
 
-  // right controls should be fixed at final top right from the start (no per-frame sync)
-  setRightControlsTopToFinal();
+  // set right controls position according to current width (mobile = below header)
+  setRightControlsPosition();
   rightHeaderGroup.classList.remove('visible');
   rightHeaderGroup.style.opacity = '0';
 
