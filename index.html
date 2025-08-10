@@ -238,17 +238,31 @@ function setGridSpacing(spacing = 12){
 }
 
 /* Set right controls position:
-   - On mobile (<=500px) place below the header (header bottom + offset)
+   - On mobile (<=500px) place below the header (header bottom + offset) AND
+     increase videoGrid margin-top so thumbnails don't overlap the controls.
    - On desktop keep them at the fixed final top */
 function setRightControlsPosition(){
   if (window.innerWidth <= 500) {
     const rect = headerContainer.getBoundingClientRect();
-    // place below header bottom with small gap
     const gap = 8;
     const top = Math.round(rect.bottom + gap);
     rightHeaderGroup.style.top = Math.max(6, top) + 'px';
+
+    // after layout stabilizes, measure controls height and adjust the grid margin so thumbnails clear it
+    // use requestAnimationFrame to ensure DOM updated
+    requestAnimationFrame(() => {
+      const controlsRect = rightHeaderGroup.getBoundingClientRect();
+      // desired margin = header height + gap + controls height + small buffer
+      const buffer = 8;
+      const desired = Math.round(rect.height + gap + controlsRect.height + buffer);
+      // preserve a sensible minimum
+      videoGrid.style.marginTop = `${Math.max(desired, 12)}px`;
+    });
+
   } else {
     rightHeaderGroup.style.top = finalTopPx() + 'px';
+    // restore normal spacing logic for desktop
+    setGridSpacing(12);
   }
 }
 
@@ -429,3 +443,6 @@ window.addEventListener('load', () => {
 </script>
 </body>
 </html>
+
+</html>
+
