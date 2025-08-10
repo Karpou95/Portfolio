@@ -33,7 +33,7 @@
     overflow-x:hidden;
   }
 
-  /* header container: fixed entire time to avoid layout jumps */
+  /* header container: initially fixed for animation; converted to absolute after animation on desktop/mobile */
   .header-container{
     position:fixed;
     left:50%;
@@ -65,7 +65,7 @@
   header h1{ margin:0 0 5px; font-size:2.8rem; }
   header p{ margin:0; font-size:1.2rem; color:var(--title-sub-color); }
 
-  /* right header (LinkedIn + toggle) - fixed to right side of viewport */
+  /* right header (LinkedIn + toggle) - viewport-anchored by default; moved to absolute on mobile via JS */
   .right-header-group{
     position:fixed;
     top:30px; /* default/fallback; JS will adjust on load/resize */
@@ -77,7 +77,7 @@
     opacity:0;
     transform:translateY(10px);
     pointer-events:none;
-    transition: opacity .35s ease, transform .35s ease;
+    transition: opacity .35s ease, transform .35s ease, top .2s ease;
   }
   .right-header-group.visible{ pointer-events:auto; }
 
@@ -143,6 +143,9 @@
   @media (max-width:500px){
     .video-grid{ grid-template-columns:1fr; }
   }
+
+  /* helper class in case something needs explicit no-scroll fallback (not used now) */
+  .no-scroll { overflow: hidden !important; touch-action: none !important; }
 </style>
 </head>
 <body>
@@ -156,7 +159,7 @@
   </header>
 </div>
 
-<!-- fixed controls remain outside the header so they are viewport-anchored -->
+<!-- fixed controls remain outside the header so they are viewport-anchored by default -->
 <div class="right-header-group" id="rightHeaderGroup" aria-label="LinkedIn and Night Mode Toggle">
   <a href="https://www.linkedin.com/in/karamupoutama/" target="_blank" rel="noopener" aria-label="LinkedIn Profile" class="linkedin-link">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1 4.98 2.12 4.98 3.5zM.25 8h4.5V24H.25V8zM7.5 8h4.3v2.2h.1c.6-1.1 2.1-2.2 4.3-2.2 4.6 0 5.45 3 5.45 6.9V24h-4.5v-7.7c0-1.8-.03-4.2-2.55-4.2-2.55 0-2.95 2-2.95 4v7.9h-4.5V8z"/></svg>
@@ -226,13 +229,17 @@ function finalTopPx(){
   const w = window.innerWidth;
   if (w <= 420) return 14;
   if (w <= 800) return 22;
-  return 30;
+  // desktop nudged a little higher to avoid thumbnail cutoff (was 30)
+  return 20;
 }
 
-/* set videoGrid top spacing to sit just below header (headerContainer height + spacing) */
+/* set videoGrid top spacing to sit just below header (headerContainer height + spacing)
+   Desktop gets a slightly larger minimum spacing so thumbnails won't be cut by header. */
 function setGridSpacing(spacing = 12){
-  // measure header visible height
   const rect = headerContainer.getBoundingClientRect();
+  // desktop spacing bump
+  const minDesktopSpacing = 20;
+  if (window.innerWidth > 500) spacing = Math.max(spacing, minDesktopSpacing);
   const margin = rect.height + spacing;
   videoGrid.style.marginTop = `${Math.max(margin, 12)}px`;
 }
@@ -240,30 +247,68 @@ function setGridSpacing(spacing = 12){
 /* Set right controls position:
    - On mobile (<=500px) place below the header (header bottom + offset) AND
      increase videoGrid margin-top so thumbnails don't overlap the controls.
-   - On desktop keep them at the fixed final top */
+   - On desktop keep them viewport-fixed at the final top (position:fixed).
+*/
 function setRightControlsPosition(){
+  const gap = 10; // small gap between header and controls
   if (window.innerWidth <= 500) {
     const rect = headerContainer.getBoundingClientRect();
-    const gap = 8;
-    const top = Math.round(rect.bottom + gap);
-    rightHeaderGroup.style.top = Math.max(6, top) + 'px';
+    const topDoc = Math.round(rect.bottom + window.scrollY + gap);
+    rightHeaderGroup.style.position = 'absolute';
+    rightHeaderGroup.style.top = topDoc + 'px';
+    rightHeaderGroup.style.right = '20px';
 
-    // after layout stabilizes, measure controls height and adjust the grid margin so thumbnails clear it
-    // use requestAnimationFrame to ensure DOM updated
+    // measure controls and set grid margin to clear header + controls
     requestAnimationFrame(() => {
       const controlsRect = rightHeaderGroup.getBoundingClientRect();
-      // desired margin = header height + gap + controls height + small buffer
-      const buffer = 8;
+      // larger buffer on mobile to avoid overlap (was 8)
+      const buffer = 16;
       const desired = Math.round(rect.height + gap + controlsRect.height + buffer);
-      // preserve a sensible minimum
       videoGrid.style.marginTop = `${Math.max(desired, 12)}px`;
     });
 
   } else {
+    rightHeaderGroup.style.position = 'fixed';
     rightHeaderGroup.style.top = finalTopPx() + 'px';
-    // restore normal spacing logic for desktop
+    rightHeaderGroup.style.right = '20px';
     setGridSpacing(12);
   }
+}
+
+/* Convert header from fixed -> absolute so it will scroll away with the page (applies to both desktop & mobile).
+   Keep it visually in the same place by adding window.scrollY to the px top. */
+function fixHeaderToDocumentFlow(){
+  if (headerContainer.dataset.position === 'absolute') return;
+
+  const rect = headerContainer.getBoundingClientRect();
+  const currentTopPx = Math.round(rect.top);
+  const absoluteTop = currentTopPx + window.scrollY;
+
+  headerContainer.style.position = 'absolute';
+  headerContainer.style.top = absoluteTop + 'px';
+  headerContainer.style.left = '50%';
+  headerContainer.style.transform = 'translate(-50%, 0)';
+  headerContainer.dataset.position = 'absolute';
+
+  // On mobile ensure right controls also converted to absolute and grid spacing updated
+  if (window.innerWidth <= 500) {
+    const gap = 10;
+    const headerRect = headerContainer.getBoundingClientRect();
+    const topDoc = Math.round(headerRect.bottom + window.scrollY + gap);
+    rightHeaderGroup.style.position = 'absolute';
+    rightHeaderGroup.style.top = topDoc + 'px';
+    rightHeaderGroup.style.right = '20px';
+
+    // update grid spacing with a larger buffer (same logic as setRightControlsPosition)
+    requestAnimationFrame(() => {
+      const controlsRect = rightHeaderGroup.getBoundingClientRect();
+      const buffer = 16;
+      const desired = Math.round(headerRect.height + gap + controlsRect.height + buffer);
+      videoGrid.style.marginTop = `${Math.max(desired, 12)}px`;
+    });
+  }
+
+  setGridSpacing(12);
 }
 
 /* Start fade-in of header (center). Use px-based top from the beginning to avoid unit switch. */
@@ -274,18 +319,14 @@ function fadeInHeader(ts){
   const eased = easeInOutCubic(p);
   headerContainer.style.opacity = String(eased);
 
-  // keep header positioned at startTopPx during fade
   headerContainer.style.top = startTopPx + 'px';
-  // keep transform at translate(-50%,-50%) while centered
   headerContainer.style.transform = `translate(-50%,-50%)`;
 
-  // ensure right controls are placed appropriately while fading
   setRightControlsPosition();
 
   if (p < 1){
     requestAnimationFrame(fadeInHeader);
   } else {
-    // begin float immediately
     floatStart = null;
     requestAnimationFrame(floatHeaderUp);
   }
@@ -302,17 +343,13 @@ function floatHeaderUp(ts){
   const currentTopPx = Math.round(startTopPx - (startTopPx - endTop) * eased);
   headerContainer.style.top = currentTopPx + 'px';
 
-  // translate Y: -50% -> 0% mapped by eased value
   const currentTranslateY = -50 + 50 * eased;
   headerContainer.style.transform = `translate(-50%, ${currentTranslateY}%)`;
 
-  // Update right controls position during the animation (on mobile it follows header bottom)
   setRightControlsPosition();
 
-  // Start thumbnails & right-header when eased crosses thresholds (so they wait until header is very close to final)
   if (!thumbnailsStarted && eased >= thumbnailsStartAt){
     thumbnailsStarted = true;
-    // set spacing then start thumbnails
     setGridSpacing(12);
     startThumbnails();
   }
@@ -324,31 +361,31 @@ function floatHeaderUp(ts){
   if (linear < 1){
     requestAnimationFrame(floatHeaderUp);
   } else {
-    // finalize
     const finalT = endTop;
     headerContainer.style.top = finalT + 'px';
     headerContainer.style.transform = 'translate(-50%, 0)';
     headerContainer.style.opacity = '1';
     animationFinished = true;
-    // final spacing
+
     setGridSpacing(12);
-    // ensure right controls are positioned exactly for final layout
     setRightControlsPosition();
-    // make sure animations started if missed
+
+    // convert header to document flow (absolute) so it scrolls away on both desktop & mobile
+    requestAnimationFrame(() => {
+      fixHeaderToDocumentFlow();
+    });
+
     if (!rightHeaderStarted){ rightHeaderStarted = true; animateRightHeaderGroup(); }
     if (!thumbnailsStarted){ thumbnailsStarted = true; startThumbnails(); }
   }
 }
 
-/* Animate the right header group (LinkedIn + toggle) - fade/move in; stays viewport-anchored */
+/* Animate the right header group (LinkedIn + toggle) - may be absolute on mobile */
 function animateRightHeaderGroup(){
   rightHeaderGroup.classList.add('visible');
-  // ensure it's placed correctly before animating
   setRightControlsPosition();
-  // simple fade/translate in
   rightHeaderGroup.style.opacity = '0';
   rightHeaderGroup.style.transform = 'translateY(10px)';
-  // small requestAnimationFrame to ensure transition kicks in
   requestAnimationFrame(() => {
     rightHeaderGroup.style.opacity = '1';
     rightHeaderGroup.style.transform = 'translateY(0)';
@@ -358,11 +395,9 @@ function animateRightHeaderGroup(){
 /* Start thumbnails animations (staggered) */
 function startThumbnails(){
   videoGrid.classList.add('visible');
-  // small delay so margin-top transitions apply first
   setTimeout(() => {
     items.forEach((it, i) => {
-      it.style.animation = 'none'; // reset
-      // stagger
+      it.style.animation = 'none';
       setTimeout(() => {
         it.style.animation = 'fadeInFloatUp 1s forwards ease-in-out';
       }, i * 300);
@@ -373,7 +408,6 @@ function startThumbnails(){
 /* Night mode toggle */
 function toggleNightMode(){
   document.body.classList.toggle('night-mode');
-  // header background uses var(--bg-color) and body transition handles timing. No separate timing.
 }
 
 /* Modal: original logic */
@@ -396,17 +430,20 @@ nightToggleBtn.addEventListener('click', toggleNightMode);
 
 /* Recalculate spacing and controls position on resize */
 window.addEventListener('resize', () => {
-  // recompute startTopPx so if user resizes before animations finished they're consistent
   startTopPx = Math.round(window.innerHeight * 0.5);
 
   if (animationFinished){
-    // header finished — set final positions and spacing
-    headerContainer.style.top = finalTopPx() + 'px';
-    headerContainer.style.transform = 'translate(-50%, 0)';
+    if (headerContainer.dataset.position === 'absolute') {
+      headerContainer.style.top = (finalTopPx() + window.scrollY) + 'px';
+      headerContainer.style.transform = 'translate(-50%, 0)';
+    } else {
+      headerContainer.style.top = finalTopPx() + 'px';
+      headerContainer.style.transform = 'translate(-50%, 0)';
+    }
+
     setGridSpacing(12);
     setRightControlsPosition();
   } else {
-    // still animating or before animation — update controls position (mobile follows header)
     setRightControlsPosition();
   }
 });
@@ -418,24 +455,20 @@ function thumbnailState(){
 
 /* Start animation on load */
 window.addEventListener('load', () => {
-  // set initial metric values
   startTopPx = Math.round(window.innerHeight * 0.5);
+
   // ensure initial states
   headerContainer.style.opacity = '0';
-  // set initial top in px (avoid percent)
   headerContainer.style.top = startTopPx + 'px';
   headerContainer.style.transform = 'translate(-50%,-50%)';
 
-  // set right controls position according to current width (mobile = below header)
   setRightControlsPosition();
   rightHeaderGroup.classList.remove('visible');
   rightHeaderGroup.style.opacity = '0';
 
   videoGrid.classList.remove('visible');
-  // pause thumbnail animations until we start them
   items.forEach(it => { it.style.animationPlayState = 'paused'; it.style.opacity = '0'; it.style.transform = 'translateY(30px)'; });
 
-  // compute spacing just in case header height is known now
   setGridSpacing(12);
 
   requestAnimationFrame(fadeInHeader);
@@ -443,6 +476,3 @@ window.addEventListener('load', () => {
 </script>
 </body>
 </html>
-
-</html>
-
