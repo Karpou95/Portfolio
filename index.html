@@ -1,310 +1,170 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>karamupoutama.com</title>
-  <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,100&display=swap" rel="stylesheet" />
-  <style>
-    :root {
-      --bg-color: #f5f5f5;
-      --text-color: #222;
-      --overlay-color: rgba(0, 0, 0, 0.6);
-      --modal-bg: rgba(0, 0, 0, 0.9);
-      --icon-fill: #000;
-      --title-sub-color: #555;
-    }
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>karamupoutama.com</title>
+<link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:ital,wght@0,100&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg-color:#f5f5f5;
+    --text-color:#222;
+    --overlay-color:rgba(0,0,0,0.6);
+    --modal-bg:rgba(0,0,0,0.9);
+    --icon-fill:#000;
+    --title-sub-color:#555;
+  }
+  body.night-mode{
+    --bg-color:#0e0e0e;
+    --text-color:#fff;
+    --overlay-color:rgba(255,255,255,0.1);
+    --modal-bg:rgba(0,0,0,0.95);
+    --icon-fill:#fff;
+    --title-sub-color:#ccc;
+  }
+  body{
+    margin:0;
+    background:var(--bg-color);
+    font-family:'Josefin Sans',sans-serif;
+    font-weight:100;
+    color:var(--text-color);
+    /* only animate page/background/colors here */
+    transition: background .3s, color .3s;
+    overflow-x:hidden;
+  }
 
-    body.night-mode {
-      --bg-color: #0e0e0e;
-      --text-color: #ffffff;
-      --overlay-color: rgba(255, 255, 255, 0.1);
-      --modal-bg: rgba(0, 0, 0, 0.95);
-      --icon-fill: #ffffff;
-      --title-sub-color: #ccc;
-    }
+  /* header container: fixed entire time to avoid layout jumps */
+  .header-container{
+    position:fixed;
+    left:50%;
+    /* top will be controlled in JS (px) to avoid percent->px jumps */
+    transform:translate(-50%,-50%);
+    width:100%;
+    max-width:600px;
+    box-sizing:border-box;
+    z-index:100;
+    opacity:0;
+    background:var(--bg-color);
+    /* only transition background/opacity so JS-driven top/transform remain smooth */
+    transition: background .3s, color .3s, opacity .25s;
+    will-change: transform, top, opacity;
+  }
 
-    body {
-      margin: 0;
-      background: var(--bg-color);
-      font-family: 'Josefin Sans', sans-serif;
-      font-weight: 100;
-      color: var(--text-color);
-      transition: background 0.3s, color 0.3s;
-    }
+  header{
+    padding:30px 20px; /* original padding preserved */
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    text-align:center;
+    margin:0 auto;
+    max-width:600px;
+    position:relative;
+    box-sizing:border-box;
+  }
+  .left-header{ display:flex; align-items:center; gap:15px; flex-direction:column; }
+  header h1{ margin:0 0 5px; font-size:2.8rem; }
+  header p{ margin:0; font-size:1.2rem; color:var(--title-sub-color); }
 
-    /* Header fade-in */
-    @keyframes fadeIn {
-      to { opacity: 1; }
-    }
+  /* right header (LinkedIn + toggle) - fixed to right side of viewport */
+  .right-header-group{
+    position:fixed;
+    top:30px; /* set once on load/resize to match final header top */
+    right:20px;
+    display:flex;
+    gap:10px;
+    align-items:center;
+    z-index:101;
+    opacity:0;
+    transform:translateY(10px);
+    pointer-events:none;
+    transition: opacity .35s ease, transform .35s ease;
+  }
+  .right-header-group.visible{ pointer-events:auto; }
 
-    header {
-      padding: 30px 20px;
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      text-align: center;
-      opacity: 0;
-      animation: fadeIn 1s forwards;
-    }
+  .linkedin-link{ width:28px; height:28px; display:block; }
+  .linkedin-link svg{ width:100%; height:100%; fill:var(--icon-fill); transition:fill .3s; }
+  .linkedin-link:hover svg{ opacity:.7; }
 
-    .left-header {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      flex-direction: column;
-    }
+  /* video grid - we'll set margin-top dynamically with JS after measuring header */
+  .video-grid{
+    margin-top: 120px; /* fallback - will be adjusted via JS */
+    padding:20px;
+    box-sizing:border-box;
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:20px;
+    opacity:0;
+    transition:opacity .45s ease, margin-top .2s ease;
+  }
+  .video-grid.visible{ opacity:1; }
 
-    header h1 {
-      margin: 0 0 5px;
-      font-size: 2.8rem;
-    }
+  .video-item{
+    position:relative;
+    width:100%;
+    padding-top:calc((9 / 16 * 100%) * 0.7);
+    overflow:hidden;
+    cursor:pointer;
+    opacity:0;
+    transform:translateY(30px);
+    animation:fadeInFloatUp 1s forwards ease-in-out;
+    animation-play-state:paused; /* start paused; we'll start via JS */
+  }
+  @keyframes fadeInFloatUp{
+    to { opacity:1; transform:translateY(0); }
+  }
+  .video-item img{ position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; transition:transform .3s ease; }
+  .video-item:hover img{ transform:scale(1.05); }
 
-    header p {
-      margin: 0;
-      font-size: 1.2rem;
-      color: var(--title-sub-color);
-    }
+  .video-item::before{ content:''; position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0); transition:background .3s ease; z-index:1; }
+  .video-item:hover::before{ background:rgba(0,0,0,0.75); }
 
-    .linkedin-link {
-      width: 28px;
-      height: 28px;
-      display: block;
-    }
+  .video-title{
+    position:absolute; top:0; left:0; width:100%; height:100%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    color:#fff; font-size:1.4rem; opacity:0; transition:opacity 1s ease; pointer-events:none; z-index:2; text-align:center; padding:0 10px; box-sizing:border-box;
+  }
+  .video-item:hover .video-title{ opacity:1; }
+  .video-title span{ font-size:.72em; margin-top:5px; opacity:.8; }
 
-    .linkedin-link svg {
-      width: 100%;
-      height: 100%;
-      fill: var(--icon-fill);
-      transition: fill 0.3s;
-    }
+  /* modal styles unchanged */
+  .modal{ position:fixed; top:0; left:0; width:100vw; height:100vh; background:var(--modal-bg); display:flex; align-items:center; justify-content:center; z-index:1000; opacity:0; pointer-events:none; transition:opacity .3s ease; }
+  .modal.active{ opacity:1; pointer-events:auto; }
+  .modal-content{ position:relative; width:90%; max-width:960px; aspect-ratio:16/9; background:black; border-radius:10px; overflow:hidden; }
+  .modal-close{ position:absolute; top:10px; right:10px; background:rgba(255,255,255,.9); border:none; border-radius:50%; width:30px; height:30px; font-size:20px; color:#222; cursor:pointer; z-index:2; }
+  .modal-close:hover{ background:white; }
 
-    .linkedin-link:hover svg {
-      opacity: 0.7;
-    }
+  .night-toggle{ cursor:pointer; font-size:.8rem; padding:3px 8px; border:1px solid var(--text-color); border-radius:5px; background:transparent; color:var(--text-color); transition:background .3s, color .3s; }
+  .night-toggle:hover{ background:var(--text-color); color:var(--bg-color); }
 
-    .right-header-group {
-      position: absolute;
-      top: 30px;
-      right: 20px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .video-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 20px;
-      padding: 20px;
-      box-sizing: border-box;
-    }
-
-    /* New float-up animation */
-    @keyframes floatUp {
-      0% {
-        opacity: 0;
-        transform: translateY(30px);
-      }
-      100% {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    .video-item {
-      position: relative;
-      width: 100%;
-      padding-top: calc((9 / 16 * 100%) * 0.7); /* Thinner thumbnails */
-      overflow: hidden;
-      cursor: pointer;
-      opacity: 0;
-      animation-name: floatUp;
-      animation-duration: 1s;
-      animation-fill-mode: forwards;
-    }
-    .video-item:nth-child(1) { animation-delay: 0s; }
-    .video-item:nth-child(2) { animation-delay: 0.4s; }
-    .video-item:nth-child(3) { animation-delay: 0.8s; }
-    .video-item:nth-child(4) { animation-delay: 1.2s; }
-
-    .video-item img {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: transform 0.3s ease;
-    }
-    .video-item:hover img {
-      transform: scale(1.05);
-    }
-
-    .video-item::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0);
-      transition: background 0.3s ease;
-      z-index: 1;
-    }
-
-    .video-item:hover::before {
-      background: rgba(0, 0, 0, 0.75);
-    }
-
-    .video-title {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-size: 1.4rem;
-      opacity: 0;
-      transition: opacity 1s ease;
-      pointer-events: none;
-      z-index: 2;
-      text-align: center;
-      padding: 0 10px;
-      box-sizing: border-box;
-    }
-
-    .video-item:hover .video-title {
-      opacity: 1;
-    }
-
-    /* Mobile fade-in when centered */
-    @media (max-width: 500px) {
-      .video-title {
-        opacity: 0 !important;
-        transition: opacity 0.5s ease;
-      }
-      .video-item.centered .video-title {
-        opacity: 1 !important;
-        pointer-events: auto;
-      }
-    }
-
-    .video-title span {
-      font-size: 0.72em;
-      margin-top: 5px;
-      opacity: 0.8;
-    }
-
-    .modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: var(--modal-bg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s ease;
-    }
-
-    .modal.active {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    .modal-content {
-      position: relative;
-      width: 90%;
-      max-width: 960px;
-      aspect-ratio: 16 / 9;
-      background: black;
-      border-radius: 10px;
-      overflow: hidden;
-    }
-
-    .modal-close {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: rgba(255, 255, 255, 0.9);
-      border: none;
-      border-radius: 50%;
-      width: 30px;
-      height: 30px;
-      font-size: 20px;
-      color: #222;
-      cursor: pointer;
-      z-index: 2;
-    }
-
-    .modal-close:hover {
-      background: white;
-    }
-
-    .night-toggle {
-      cursor: pointer;
-      font-size: 0.8rem;
-      padding: 3px 8px;
-      border: 1px solid var(--text-color);
-      border-radius: 5px;
-      background: transparent;
-      color: var(--text-color);
-      transition: background 0.3s, color 0.3s;
-      margin-left: 10px;
-    }
-
-    .night-toggle:hover {
-      background: var(--text-color);
-      color: var(--bg-color);
-    }
-
-    @media (max-width: 800px) {
-      .video-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-      .right-header-group {
-        position: static;
-        margin-top: 15px;
-        justify-content: center;
-      }
-    }
-
-    @media (max-width: 500px) {
-      .video-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
+  @media (max-width:800px){
+    .video-grid{ grid-template-columns:repeat(2,1fr); }
+    .right-header-group{ right:12px; }
+  }
+  @media (max-width:500px){
+    .video-grid{ grid-template-columns:1fr; }
+  }
+</style>
 </head>
 <body>
 
-<header>
-  <div class="left-header">
-    <h1>KARAMU POUTAMA</h1>
-    <p>Videographer | Audio Engineer | Music Producer</p>
-  </div>
+<div class="header-container" id="headerContainer" aria-hidden="false">
+  <header>
+    <div class="left-header">
+      <h1>KARAMU POUTAMA</h1>
+      <p>Videographer | Audio Engineer | Music Producer</p>
+    </div>
+  </header>
+</div>
 
-  <div class="right-header-group">
-    <a href="https://www.linkedin.com/in/karamupoutama/" target="_blank" rel="noopener" aria-label="LinkedIn Profile" class="linkedin-link">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-        <path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1 4.98 2.12 4.98 3.5zM.25 8h4.5V24H.25V8zM7.5 8h4.3v2.2h.1c.6-1.1 2.1-2.2 4.3-2.2 4.6 0 5.45 3 5.45 6.9V24h-4.5v-7.7c0-1.8-.03-4.2-2.55-4.2-2.55 0-2.95 2-2.95 4v7.9h-4.5V8z"/>
-      </svg>
-    </a>
-    <button class="night-toggle" onclick="toggleNightMode()">Night Mode</button>
-  </div>
-</header>
+<!-- moved outside header-container so position:fixed is relative to viewport (entire screen) -->
+<div class="right-header-group" id="rightHeaderGroup" aria-label="LinkedIn and Night Mode Toggle">
+  <a href="https://www.linkedin.com/in/karamupoutama/" target="_blank" rel="noopener" aria-label="LinkedIn Profile" class="linkedin-link">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4.98 3.5C4.98 4.88 3.87 6 2.5 6S0 4.88 0 3.5 1.12 1 2.5 1 4.98 2.12 4.98 3.5zM.25 8h4.5V24H.25V8zM7.5 8h4.3v2.2h.1c.6-1.1 2.1-2.2 4.3-2.2 4.6 0 5.45 3 5.45 6.9V24h-4.5v-7.7c0-1.8-.03-4.2-2.55-4.2-2.55 0-2.95 2-2.95 4v7.9h-4.5V8z"/></svg>
+  </a>
+  <button class="night-toggle" id="nightToggleBtn">Night Mode</button>
+</div>
 
-<div class="video-grid">
+<div class="video-grid" id="videoGrid">
   <div class="video-item" data-video-id="H15VIfPQ8Qc">
     <img src="https://img.youtube.com/vi/H15VIfPQ8Qc/maxresdefault.jpg" alt="PROJECT HUON" />
     <div class="video-title">PROJECT HUON<span>2025</span></div>
@@ -331,68 +191,225 @@
 </div>
 
 <script>
-  const items = document.querySelectorAll('.video-item');
-  const modal = document.getElementById('videoModal');
-  const iframe = document.getElementById('videoIframe');
-  const closeBtn = document.getElementById('modalCloseBtn');
+/* --------- Utility easing --------- */
+function easeInOutCubic(t){
+  return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3)/2;
+}
 
-  items.forEach(item => {
-    item.addEventListener('click', () => {
-      const vid = item.dataset.videoId;
-      iframe.src = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0`;
-      modal.classList.add('active');
-    });
-  });
+/* Elements */
+const headerContainer = document.getElementById('headerContainer');
+const rightHeaderGroup = document.getElementById('rightHeaderGroup');
+const videoGrid = document.getElementById('videoGrid');
+const items = document.querySelectorAll('.video-item'); // thumbnails
+const modal = document.getElementById('videoModal');
+const iframe = document.getElementById('videoIframe');
+const closeBtn = document.getElementById('modalCloseBtn');
+const nightToggleBtn = document.getElementById('nightToggleBtn');
 
-  closeBtn.addEventListener('click', () => {
-    iframe.src = '';
-    modal.classList.remove('active');
-  });
+/* Durations (ms) */
+const fadeDuration = 1200;   // header fade
+const floatDuration = 1100;  // header float duration
 
-  modal.addEventListener('click', e => {
-    if (e.target === modal) closeBtn.click();
-  });
+let fadeStart = null;
+let floatStart = null;
+let thumbnailsStarted = false;
+let rightHeaderStarted = false;
+let animationFinished = false;
 
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && modal.classList.contains('active')) closeBtn.click();
-  });
+/* thresholds */
+const thumbnailsStartAt = 0.92; // thumbnails begin when progress >= 92%
+const rightHeaderStartAt = 0.94; // right controls animate in slightly later
 
-  function toggleNightMode() {
-    document.body.classList.toggle('night-mode');
+/* positions (px) */
+let startTopPx = Math.round(window.innerHeight * 0.5);
+function finalTopPx(){
+  const w = window.innerWidth;
+  if (w <= 420) return 14;
+  if (w <= 800) return 22;
+  return 30;
+}
+
+/* set videoGrid top spacing to sit just below header (headerContainer height + spacing) */
+function setGridSpacing(spacing = 12){
+  // measure header visible height
+  const rect = headerContainer.getBoundingClientRect();
+  const margin = rect.height + spacing;
+  videoGrid.style.marginTop = `${Math.max(margin, 12)}px`;
+}
+
+/* Set right control to fixed final top (no per-frame sync). Keeps them at the right side. */
+function setRightControlsTopToFinal(){
+  rightHeaderGroup.style.top = finalTopPx() + 'px';
+}
+
+/* Start fade-in of header (center). Use px-based top from the beginning to avoid unit switch. */
+function fadeInHeader(ts){
+  if (!fadeStart) fadeStart = ts;
+  const elapsed = ts - fadeStart;
+  const p = Math.min(elapsed / fadeDuration, 1);
+  const eased = easeInOutCubic(p);
+  headerContainer.style.opacity = String(eased);
+
+  // keep header positioned at startTopPx during fade
+  headerContainer.style.top = startTopPx + 'px';
+  // keep transform at translate(-50%,-50%) while centered
+  headerContainer.style.transform = `translate(-50%,-50%)`;
+
+  if (p < 1){
+    requestAnimationFrame(fadeInHeader);
+  } else {
+    // begin float immediately
+    floatStart = null;
+    requestAnimationFrame(floatHeaderUp);
+  }
+}
+
+/* Float header from center to top smoothly (px -> px), using only JS for top & transform. */
+function floatHeaderUp(ts){
+  if (!floatStart) floatStart = ts;
+  const elapsed = ts - floatStart;
+  const linear = Math.min(elapsed / floatDuration, 1);
+  const eased = easeInOutCubic(linear);
+
+  const endTop = finalTopPx();
+  const currentTopPx = Math.round(startTopPx - (startTopPx - endTop) * eased);
+  headerContainer.style.top = currentTopPx + 'px';
+
+  // translate Y: -50% -> 0% mapped by eased value
+  const currentTranslateY = -50 + 50 * eased;
+  headerContainer.style.transform = `translate(-50%, ${currentTranslateY}%)`;
+
+  // Start thumbnails & right-header when eased crosses thresholds (so they wait until header is very close to final)
+  if (!thumbnailsStarted && eased >= thumbnailsStartAt){
+    thumbnailsStarted = true;
+    // set spacing then start thumbnails
+    setGridSpacing(12);
+    startThumbnails();
+  }
+  if (!rightHeaderStarted && eased >= rightHeaderStartAt){
+    rightHeaderStarted = true;
+    animateRightHeaderGroup();
   }
 
-  // Mobile fade-in video title when centered in viewport
-  if (window.matchMedia("(max-width: 500px)").matches) {
-    const observerOptions = {
-      root: null,
-      rootMargin: '0px',
-      threshold: 0.5
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        const videoItem = entry.target;
-
-        const bounding = videoItem.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
-        const centerY = viewportHeight / 2;
-
-        const itemCenterY = bounding.top + bounding.height / 2;
-
-        const isCentered = Math.abs(centerY - itemCenterY) < viewportHeight * 0.1;
-
-        if (entry.isIntersecting && isCentered) {
-          videoItem.classList.add('centered');
-        } else {
-          videoItem.classList.remove('centered');
-        }
-      });
-    }, observerOptions);
-
-    document.querySelectorAll('.video-item').forEach(item => {
-      observer.observe(item);
-    });
+  if (linear < 1){
+    requestAnimationFrame(floatHeaderUp);
+  } else {
+    // finalize
+    const finalT = endTop;
+    headerContainer.style.top = finalT + 'px';
+    headerContainer.style.transform = 'translate(-50%, 0)';
+    headerContainer.style.opacity = '1';
+    animationFinished = true;
+    // final spacing
+    setGridSpacing(12);
+    // ensure right controls are exactly at final top
+    setRightControlsTopToFinal();
+    // make sure animations started if missed
+    if (!rightHeaderStarted){ rightHeaderStarted = true; animateRightHeaderGroup(); }
+    if (!thumbnailsStarted){ thumbnailsStarted = true; startThumbnails(); }
   }
+}
+
+/* Animate the right header group (LinkedIn + toggle) - just fades/moves in; stays fixed right side */
+function animateRightHeaderGroup(){
+  rightHeaderGroup.classList.add('visible');
+  // ensure it's placed at the final top
+  setRightControlsTopToFinal();
+  // simple fade/translate in
+  rightHeaderGroup.style.opacity = '0';
+  rightHeaderGroup.style.transform = 'translateY(10px)';
+  // small requestAnimationFrame to ensure transition kicks in
+  requestAnimationFrame(() => {
+    rightHeaderGroup.style.opacity = '1';
+    rightHeaderGroup.style.transform = 'translateY(0)';
+  });
+}
+
+/* Start thumbnails animations (staggered) */
+function startThumbnails(){
+  videoGrid.classList.add('visible');
+  // small delay so margin-top transitions apply first
+  setTimeout(() => {
+    items.forEach((it, i) => {
+      it.style.animation = 'none'; // reset
+      // stagger
+      setTimeout(() => {
+        it.style.animation = 'fadeInFloatUp 1s forwards ease-in-out';
+      }, i * 300);
+    });
+  }, 40);
+}
+
+/* Night mode toggle */
+function toggleNightMode(){
+  document.body.classList.toggle('night-mode');
+  // header background uses var(--bg-color) and body transition handles timing. No separate timing.
+}
+
+/* Modal: original logic */
+items.forEach(item => {
+  item.addEventListener('click', () => {
+    const vid = item.dataset.videoId;
+    iframe.src = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0`;
+    modal.classList.add('active');
+  });
+});
+closeBtn.addEventListener('click', () => {
+  iframe.src = '';
+  modal.classList.remove('active');
+});
+modal.addEventListener('click', e => { if (e.target === modal) closeBtn.click(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('active')) closeBtn.click(); });
+
+/* Hook up night toggle button */
+nightToggleBtn.addEventListener('click', toggleNightMode);
+
+/* Recalculate spacing and controls position on resize */
+window.addEventListener('resize', () => {
+  // recompute startTopPx so if user resizes before animations finished they're consistent
+  startTopPx = Math.round(window.innerHeight * 0.5);
+
+  if (animationFinished){
+    // header finished — set final positions and spacing
+    headerContainer.style.top = finalTopPx() + 'px';
+    headerContainer.style.transform = 'translate(-50%, 0)';
+    setGridSpacing(12);
+    setRightControlsTopToFinal();
+  } else {
+    // still animating or before animation — set right controls to final top (they remain fixed)
+    setRightControlsTopToFinal();
+  }
+});
+
+/* helper: detect if thumbnails already started (simple check) */
+function thumbnailState(){
+  return Array.from(items).some(it => it.style.animation && it.style.animation.indexOf('fadeInFloatUp') !== -1) || videoGrid.classList.contains('visible');
+}
+
+/* Start animation on load */
+window.addEventListener('load', () => {
+  // set initial metric values
+  startTopPx = Math.round(window.innerHeight * 0.5);
+  // ensure initial states
+  headerContainer.style.opacity = '0';
+  // set initial top in px (avoid percent)
+  headerContainer.style.top = startTopPx + 'px';
+  headerContainer.style.transform = 'translate(-50%,-50%)';
+
+  // right controls should be fixed at final top right from the start (no per-frame sync)
+  setRightControlsTopToFinal();
+  rightHeaderGroup.classList.remove('visible');
+  rightHeaderGroup.style.opacity = '0';
+
+  videoGrid.classList.remove('visible');
+  // pause thumbnail animations until we start them
+  items.forEach(it => { it.style.animationPlayState = 'paused'; it.style.opacity = '0'; it.style.transform = 'translateY(30px)'; });
+
+  // compute spacing just in case header height is known now
+  setGridSpacing(12);
+
+  requestAnimationFrame(fadeInHeader);
+});
 </script>
 </body>
 </html>
